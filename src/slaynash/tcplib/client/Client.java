@@ -32,7 +32,9 @@ public class Client {
 	private Thread thread;
 
 	private SSLContext sslContext;
-	private static final String PASSPHRASE = "clientpw";
+	
+	private String sslfolder = "";
+	private String passphrase = "serverpw";
 	
 	private ConnectionListener connectionListener = null;
 	
@@ -58,7 +60,7 @@ public class Client {
 				}
 			}
 		});
-		thread.setName("LUM Thread");
+		thread.setName("CCOMClient Thread");
 		thread.setDaemon(true);
 	}
 	
@@ -69,7 +71,7 @@ public class Client {
 	private void clientThread() {
 		try {
 			if(connectionListener != null) connectionListener.connectionStarted();
-			LogSystem.info.println("[LUM] Connecting to server...");
+			LogSystem.info.println("Connecting to server...");
 			setupSSL();
 			SSLSocketFactory sf = sslContext.getSocketFactory();
 			socket = (SSLSocket)sf.createSocket(address, port);
@@ -77,16 +79,16 @@ public class Client {
 			outputStream = new PrintWriter(new BufferedOutputStream(socket.getOutputStream()));
 			String ln;
 			if(connectionListener != null) connectionListener.waitingForConnection();
-			LogSystem.info.println("[LUM] Waiting for connection...");
+			LogSystem.info.println("Waiting for connection...");
 			while((ln = readln()) != null && !ln.equals("READY"));
 			if(connectionListener != null) connectionListener.connecting();
-			LogSystem.info.println("[LUM] Connecting...");
+			LogSystem.info.println("Connecting...");
 			println("TCPLIB_"+clientVersion);
 			if((ln = readln()) == null || !ln.equals("OK")) {
 				throw new Exception("Connection aborted");
 			}
 			if(connectionListener != null) connectionListener.connected();
-			LogSystem.info.println("[LUM] Connected.");
+			LogSystem.info.println("Connected.");
 		} catch (Exception e) {
 			LogSystem.err.printStackTrace(e);
 			if(connectionListener != null) connectionListener.connectionFailed(e);
@@ -94,6 +96,8 @@ public class Client {
 		}
 		try {
 			listen();
+			outputStream.close();
+			socket.close();
 		} catch (Exception e) {
 			LogSystem.err.printStackTrace(e);
 			if(connectionListener != null) connectionListener.disconnected(e);
@@ -106,15 +110,17 @@ public class Client {
 	    secureRandom.nextInt();
 		
 		KeyStore serverKeyStore = KeyStore.getInstance( "JKS" );
-		serverKeyStore.load( Client.class.getClassLoader().getResourceAsStream( "server.public" ), "public".toCharArray() );
+		serverKeyStore.load( Client.class.getClassLoader().getResourceAsStream( sslfolder+"server.public" ), "public".toCharArray() );
+		System.out.println(sslfolder+"server.public: "+Client.class.getClassLoader().getResourceAsStream( sslfolder+"server.public" ));
 		KeyStore clientKeyStore = KeyStore.getInstance( "JKS" );
-		clientKeyStore.load( Client.class.getClassLoader().getResourceAsStream( "client.private" ), PASSPHRASE.toCharArray() );
+		clientKeyStore.load( Client.class.getClassLoader().getResourceAsStream( sslfolder+"client.private" ), passphrase.toCharArray() );
+		System.out.println(sslfolder+"client.private: "+Client.class.getClassLoader().getResourceAsStream( sslfolder+"server.public" ));
 		
 		TrustManagerFactory tmf = TrustManagerFactory.getInstance( "SunX509" );
 		tmf.init( serverKeyStore );
 		
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance( "SunX509" );
-		kmf.init( clientKeyStore, PASSPHRASE.toCharArray() );
+		kmf.init( clientKeyStore, passphrase.toCharArray() );
 		
 		sslContext = SSLContext.getInstance( "TLS" );
 		sslContext.init( kmf.getKeyManagers(), tmf.getTrustManagers(), secureRandom );
@@ -132,16 +138,20 @@ public class Client {
 		return in;
 	}
 
-	public void println(String out) {
+	public void println(String out) throws IOException {
 		LogSystem.info.println(">>> "+out);
 		outputStream.println(out);
-		outputStream.flush();
+		if(outputStream.checkError()) {
+			throw new IOException("Unable to send data");
+		}
 	}
 	
-	public void printlnSecure(String out) {
+	public void printlnSecure(String out) throws IOException {
 		LogSystem.info.println(">>> *****************");
 		outputStream.println(out);
-		outputStream.flush();
+		if(outputStream.checkError()) {
+			throw new IOException("Unable to send data");
+		}
 	}
 
 	private void listen() throws IOException {
@@ -151,11 +161,19 @@ public class Client {
 		}
 	}
 
-	public void setConnectionListener(ConnectionListener lumConnectionEventListener) {
-		connectionListener = lumConnectionEventListener;
+	public void setConnectionListener(ConnectionListener connectionEventListener) {
+		connectionListener = connectionEventListener;
 	}
 
 	public void setAutoReconnect(boolean autoReconnect) {
 		this.autoReconnect = autoReconnect;
+	}
+	
+	public void setSSLFolder(String folder) {
+		sslfolder = folder + "/";
+	}
+	
+	public void setSSLPass(String pass) {
+		passphrase = pass;
 	}
 }

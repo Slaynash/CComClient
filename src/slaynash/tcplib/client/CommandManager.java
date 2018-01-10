@@ -57,7 +57,7 @@ public class CommandManager {
 
 	public static void registerCommand(String name, Class<? extends Command> command) {
 		if(commands.get(name) == null) commands.put(name, command);
-		else LogSystem.err.println("[LUM] Trying to register a command twice ("+name+")");
+		else LogSystem.err.println("[CCOM] Trying to register a command twice ("+name+")");
 	}
 	
 	public static void remove(Command command) {

@@ -1,5 +1,7 @@
 package slaynash.tcplib.client;
 
+import java.io.IOException;
+
 public abstract class Command {
 	
 	private Client client = null;
@@ -9,11 +11,21 @@ public abstract class Command {
 	
 	
 	public void println(String string) {
-		client.println(outId+" "+string);
+		try {
+			client.println(outId+" "+string);
+		} catch (IOException e) {
+			LogSystem.err.printStackTrace(e);
+			remoteError(e.getMessage());
+		}
 	}
 	
 	public void printlnSecure(String string) {
-		client.printlnSecure(outId+" "+string);
+		try {
+			client.printlnSecure(outId+" "+string);
+		} catch (IOException e) {
+			LogSystem.err.printStackTrace(e);
+			remoteError(e.getMessage());
+		}
 	}
 	
 	public void setClient(Client client) {
@@ -36,7 +48,7 @@ public abstract class Command {
 		return outId;
 	}
 	
-	public void remoteError(String string) {
+	public void remoteError(String error) {
 		destroy();
 	}
 	

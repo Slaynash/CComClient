@@ -6,8 +6,9 @@ public class LogSystemOS {
 
 	public void println(Object out) {}
 
-	public void printStackTrace(Exception e) {
-		println(e.getClass().getName()+": "+e.getMessage());
+	public void printStackTrace(Throwable e) {
+		println(e.toString());
 		for(StackTraceElement ste:e.getStackTrace()) println("\tat "+ste.toString());
+		if(e.getCause() != null) printStackTrace(e.getCause());
 	}
 }
